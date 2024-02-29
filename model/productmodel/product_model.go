@@ -5,7 +5,7 @@ import (
 	"go-web-native/entities"
 )
 
-func GetAll() []entities.Product{
+func GetAll() []entities.Product {
 	rows, err := config.DB.Query(`SELECT
 	products.id,
 	products.name,
@@ -15,7 +15,7 @@ func GetAll() []entities.Product{
 	products.created_at,
 	products.updated_at
 	FROM products
-	JOIN categories ON products.category_id = categories.id`,)
+	JOIN categories ON products.category_id = categories.id`)
 
 	if err != nil {
 		panic(err)
@@ -25,7 +25,7 @@ func GetAll() []entities.Product{
 
 	var products []entities.Product
 
-	for rows.Next(){
+	for rows.Next() {
 		var product entities.Product
 		err := rows.Scan(
 			&product.Id,
@@ -59,7 +59,7 @@ func Create(product entities.Product) bool {
 		product.UpdatedAt,
 	)
 
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 
@@ -70,4 +70,71 @@ func Create(product entities.Product) bool {
 
 	return LastInsertId > 0
 
+}
+
+func Detail(id int) entities.Product {
+	row := config.DB.QueryRow(
+		`SELECT
+		products.id,
+		products.name,
+		categories.name as category_name,
+		products.stock,
+		products.description,
+		products.created_at,
+		products.updated_at
+		FROM products
+		JOIN categories ON products.category_id = categories.id
+		WHERE products.id = ?
+		`, id)
+
+	var product entities.Product
+
+	err := row.Scan(
+		&product.Id,
+		&product.Name,
+		&product.Category.Name,
+		&product.Stock,
+		&product.Description,
+		&product.CreatedAt,
+		&product.UpdatedAt,
+	)
+
+	if err != nil {
+		panic(err)
+	}
+
+	return product
+}
+
+func Update(id int, product entities.Product) bool {
+	query, err := config.DB.Exec(`
+	UPDATE products SET
+		name = ?,
+		category_id = ?,
+		stock = ?,
+		description = ?,
+		updated_at = ?,
+		WHERE id = ?
+	`, product.Name,
+		product.Category.Id,
+		product.Stock,
+		product.Description,
+		product.UpdatedAt,
+		id)
+
+	if err != nil {
+		panic(err)
+	}
+
+	result, err := query.RowsAffected()
+	if err != nil {
+		panic(err)
+	}
+
+	return result > 0
+}
+
+func Delete(id int) error {
+	_, err := config.DB.Exec("DELETE FROM products WHERE id = ?", id)
+	return err
 }
